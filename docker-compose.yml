@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  webapp:
+    container_name: vuln-webapp
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - vuln-net
+
+  postgres:
+    image: postgres:16
+    container_name: vuln-postgres
+    environment:
+      POSTGRES_DB: todotask_db
+      POSTGRES_USER: todotask_user
+      POSTGRES_PASSWORD: todotask_passwd
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - vuln-net
+
+volumes:
+  postgres_data:
+
+networks:
+  vuln-net:
+    driver: bridge
