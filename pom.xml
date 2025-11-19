@@ -31,9 +31,9 @@
 
         <!-- PostgreSQL -->
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.7.4</version>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>12.2.0.jre11</version> <!-- Hoặc phiên bản mới nhất -->
         </dependency>
 
         <!-- JWT + Jackson (Deserialization) -->
