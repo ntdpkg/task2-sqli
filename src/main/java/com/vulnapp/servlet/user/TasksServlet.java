@@ -27,15 +27,15 @@ public class TasksServlet extends HttpServlet {
             return;
         }
         String searchQuery = req.getParameter("q");
-        String sortOrder = req.getParameter("order");
+        String sortOrder = req.getParameter("order") != null ? req.getParameter("order") : "ASC";
+
         List<Task> tasks = new ArrayList<>();
-        String sql = "SELECT id, title, description FROM tasks WHERE user_id = ? AND (title LIKE ? OR description LIKE ?) ORDER BY title " + (sortOrder != null ? sortOrder : "ASC");
+        String sql = "SELECT * from searchTasks(?, ?, ?)";
 
         try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, user.getId());
-            String searchQueryPattern = "%" + (searchQuery != null ? searchQuery : "") + "%";
-            pstmt.setString(2, searchQueryPattern);
-            pstmt.setString(3, searchQueryPattern);
+            pstmt.setString(2, searchQuery);
+            pstmt.setString(3, sortOrder);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
