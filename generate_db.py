@@ -3,6 +3,7 @@ import psycopg2
 from faker import Faker
 import random
 import math
+import psycopg2.extras
 
 DB_CONFIG = {
     'host': 'localhost',
@@ -12,8 +13,8 @@ DB_CONFIG = {
     'database': 'todotask_db'
 }
 
-NUM_USERS = 1000
-NUM_TASKS = 20000
+N_USERS = 1000
+N_TASKS = 3000
 BATCH_SIZE = 1000
 
 fake = Faker()
@@ -56,38 +57,33 @@ def generate_tasks(cursor, num_tasks, num_users, batch_size):
     
     generate_in_batches(cursor, num_tasks, batch_size, generator, query)
 
-def main():
-    conn = create_connection()
-    if not conn:
-        return
+conn = create_connection()
+if not conn:
+    return
+    
+try:
+    overall_start_time = time.time()
+    with conn.cursor() as cursor:
         
-    try:
-        overall_start_time = time.time()
-        with conn.cursor() as cursor:
-            
-            cursor.execute("TRUNCATE TABLE tasks, users RESTART IDENTITY CASCADE;")
-            conn.commit()
+        cursor.execute("TRUNCATE TABLE tasks, users RESTART IDENTITY CASCADE;")
+        conn.commit()
 
-            query = "INSERT INTO users (username, email, password, role) VALUES ('admin', 'admin@admin.com', 'admin123', 'admin') ON CONFLICT (username) DO NOTHING"
-            cursor.execute(query)
-            conn.commit()
+        query = "INSERT INTO users (username, email, password, role) VALUES ('admin', 'admin@admin.com', 'admin123', 'admin') ON CONFLICT (username) DO NOTHING"
+        cursor.execute(query)
+        conn.commit()
 
-            generate_users(cursor, NUM_USERS, BATCH_SIZE)
-            conn.commit()
-            
-            generate_tasks(cursor, NUM_TASKS, NUM_USERS, BATCH_SIZE)
-            conn.commit()
+        generate_users(cursor, N_USERS, BATCH_SIZE)
+        conn.commit()
+        
+        generate_tasks(cursor, N_TASKS, N_USERS, BATCH_SIZE)
+        conn.commit()
 
-        overall_end_time = time.time()
+    overall_end_time = time.time()
 
-    except (Exception, psycopg2.Error) as e:
-        print(f"DB error: {e}")
-        conn.rollback() 
-    finally:
-        if conn:
-            conn.close()
-            print("Database connection closed.")
-
-if __name__ == "__main__":
-    import psycopg2.extras
-    main()
+except (Exception, psycopg2.Error) as e:
+    print(f"DB error: {e}")
+    conn.rollback() 
+finally:
+    if conn:
+        conn.close()
+        print("Database connection closed.")
