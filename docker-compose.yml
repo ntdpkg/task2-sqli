@@ -6,26 +6,33 @@ services:
     build: .
     ports:
       - "8080:8080"
+      - "5005:5005" # <--- [QUAN TRỌNG] Mở cổng debug ra máy host
+    environment:
+      # Cấu hình JDWP:
+      # transport=dt_socket: Giao thức socket
+      # server=y: Container đóng vai trò server lắng nghe
+      # suspend=n: Ứng dụng khởi động ngay lập tức (chọn 'y' nếu muốn app đợi bạn kết nối debug rồi mới chạy)
+      # address=*:5005: Lắng nghe trên mọi IP ở cổng 5005 (bắt buộc phải là * hoặc 0.0.0.0 trong Docker)
+      - CATALINA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     depends_on:
       - mssql
     networks:
       - vuln-net
+    volumes:
+      - ./target/VulnTodoApp-1.0.war:/usr/local/tomcat/webapps/ROOT.war
 
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: vuln-mssql
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=StrongPassw0rd!123 # Password phải đủ phức tạp
+      - MSSQL_SA_PASSWORD=StrongPassw0rd!123 
       - MSSQL_PID=Express
     ports:
       - "1433:1433"
     restart: unless-stopped
     networks:
       - vuln-net
-      
-volumes:
-  postgres_data:
 
 networks:
   vuln-net:
