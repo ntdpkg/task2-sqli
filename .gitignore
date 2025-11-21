@@ -13,7 +13,7 @@ replay_pid*
 ##############################
 ## Maven
 ##############################
-target/
+target/*
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -91,3 +91,4 @@ nb-configuration.xml
 
 exploit/
 tomcat.8080/
+*.class
