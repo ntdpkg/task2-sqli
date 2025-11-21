@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 
 public class Database {
-    private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=master;encrypt=false;trustServerCertificate=true;";
+    private static final String URL = "jdbc:sqlserver://mssql:1433;databaseName=master;encrypt=false;trustServerCertificate=true;";
     private static final String USER = "sa";
     private static final String PASS = "StrongPassw0rd!123";
 
