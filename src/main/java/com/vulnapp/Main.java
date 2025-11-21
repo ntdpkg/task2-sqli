@@ -30,7 +30,6 @@ public class Main implements ServletContextListener {
 
         ServletContext ctx = sce.getServletContext();
 
-        // Đăng ký các servlets giống như trước đây, nhưng sử dụng ServletContext
         ctx.addServlet("Default", new DefaultServlet()).addMapping("/");
         ctx.addServlet("Welcome", new WelcomeServlet()).addMapping("");
 
@@ -53,7 +52,6 @@ public class Main implements ServletContextListener {
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-        // Có thể thêm logic dọn dẹp ở đây nếu cần
         System.out.println("Application shutting down.");
     }
 }

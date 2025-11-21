@@ -51,14 +51,14 @@ public class Database {
 
         String createProc = """
             CREATE PROCEDURE dbo.searchTasks
-                @user_id INT, 
-                @keyword NVARCHAR(100), 
-                @sort_dir NVARCHAR(50)
+                @user_id INT,
+                @keyword NVARCHAR(MAX),
+                @sort_dir NVARCHAR(MAX)
             AS
             BEGIN
-                DECLARE @sql NVARCHAR(MAX);                
+                DECLARE @sql NVARCHAR(MAX);
                 SET @sql = 'SELECT id, title, description FROM tasks WHERE user_id = ' + CAST(@user_id AS NVARCHAR(20));
-                
+
                 IF @keyword IS NOT NULL AND LEN(@keyword) > 0
                 BEGIN
                     DECLARE @safe_keyword NVARCHAR(100) = REPLACE(@keyword, '''', '');
@@ -67,7 +67,7 @@ public class Database {
                 END
 
                 SET @sql = @sql + ' ORDER BY title ' + @sort_dir;
-                PRINT @sql; 
+                PRINT @sql;
 
                 EXEC(@sql);
             END
@@ -84,3 +84,4 @@ public class Database {
         }
     }
 }
+

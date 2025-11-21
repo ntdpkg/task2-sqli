@@ -30,7 +30,8 @@ public class TasksServlet extends HttpServlet {
         String sortOrder = req.getParameter("order") != null ? req.getParameter("order") : "ASC";
 
         List<Task> tasks = new ArrayList<>();
-        String sql = "{call dbo.searchTasks(?, ?, ?)}";
+//        String sql = "{call dbo.searchTasks(?, ?, ?)}";
+        String sql = "exec dbo.searchTasks @user_id=?, @keyword=?, @sort_dir=?";
 
         try (Connection conn = Database.getConnection(); CallableStatement pstmt = conn.prepareCall(sql)) {
             pstmt.setInt(1, user.getId());
