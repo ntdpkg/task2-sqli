@@ -3,14 +3,6 @@
 <head>
     <title>Todo List</title>
 
-    <script>
-        const token = localStorage.getItem('jwt_token');
-        if (!token) {
-            alert('You are not logged in. Redirecting to login page.');
-            window.location.replace('/login'); 
-        }
-    </script>
-
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
         .container { border: 1px solid #ccc; padding: 20px; border-radius: 5px; margin-bottom: 20px;}
