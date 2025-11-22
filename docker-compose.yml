@@ -7,22 +7,29 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - mssql
+      - oracle
+    environment:
+      - DB_TYPE=oracle
     networks:
       - vuln-net
 
-  mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: vuln-mssql
+  oracle:
+    image: gvenzl/oracle-free:latest
+    container_name: vuln-oracle
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=StrongPassw0rd!123 
-      - MSSQL_PID=Express
+      - ORACLE_PASSWORD=StrongPassw0rd!123
+      - APP_USER=todotask_user
+      - APP_USER_PASSWORD=todotask_passwd
     ports:
-      - "1433:1433"
+      - "1521:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
     restart: unless-stopped
     networks:
       - vuln-net
+
+volumes:
+  oracle_data:
 
 networks:
   vuln-net:

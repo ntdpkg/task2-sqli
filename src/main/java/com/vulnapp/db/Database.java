@@ -5,9 +5,10 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 
 public class Database {
-    private static final String URL = "jdbc:sqlserver://mssql:1433;databaseName=master;encrypt=false;trustServerCertificate=true;";
-    private static final String USER = "sa";
-    private static final String PASS = "StrongPassw0rd!123";
+//    private static final String URL = "jdbc:oracle:thin:@oracle:1521/FREEPDB1";
+    private static final String URL = "jdbc:oracle:thin:@localhost:1521/FREEPDB1";
+    private static final String USER = "todotask_user";
+    private static final String PASS = "todotask_passwd";
 
     public static Connection getConnection() throws Exception {
         return DriverManager.getConnection(URL, USER, PASS);
@@ -15,72 +16,97 @@ public class Database {
 
     private static void initUsersTable(Statement stmt) throws Exception {
         String sql = """
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='users' AND xtype='U')
-            BEGIN
-                CREATE TABLE users (
-                    id INT IDENTITY(1,1) PRIMARY KEY,
-                    username NVARCHAR(50) UNIQUE NOT NULL,
-                    email NVARCHAR(100) UNIQUE NOT NULL,
-                    role NVARCHAR(10) DEFAULT 'user' NOT NULL,
-                    password NVARCHAR(50) NOT NULL
-                );
-                INSERT INTO users (username, email, password, role) VALUES ('admin', 'admin@admin.com', 'admin123', 'admin');
-            END
+            CREATE TABLE users (
+                id NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                username VARCHAR2(50) UNIQUE NOT NULL,
+                email VARCHAR2(100) UNIQUE NOT NULL,
+                role VARCHAR2(10) DEFAULT 'user' NOT NULL,
+                password VARCHAR2(50) NOT NULL
+            )
         """;
         stmt.execute(sql);
+        stmt.execute("INSERT INTO users (username, email, password, role) VALUES ('admin', 'admin@admin.com', 'admin123', 'admin');");
     }
 
     private static void initTasksTable(Statement stmt) throws Exception {
         String sql = """
-            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='tasks' AND xtype='U')
-            BEGIN
-                CREATE TABLE tasks (
-                    id INT IDENTITY(1,1),
-                    user_id INT FOREIGN KEY REFERENCES users(id),
-                    title NVARCHAR(100) NOT NULL,
-                    description NVARCHAR(MAX) NOT NULL,
-                    PRIMARY KEY (id, user_id)
-                );
-            END
+            CREATE TABLE tasks (
+                id NUMBER GENERATED ALWAYS AS IDENTITY,
+                user_id NUMBER REFERENCES users(id),
+                title VARCHAR2(100) NOT NULL,
+                description VARCHAR2(4000) NOT NULL,
+                PRIMARY KEY (id, user_id)
+            );
         """;
         stmt.execute(sql);
     }
 
     private static void initVulnerableProcedure(Statement stmt) throws Exception {
-        stmt.execute("IF OBJECT_ID('dbo.searchTasks', 'P') IS NOT NULL DROP PROCEDURE dbo.searchTasks;");
-
         String createProc = """
-            CREATE PROCEDURE dbo.searchTasks
-                @user_id INT,
-                @keyword NVARCHAR(MAX),
-                @sort_dir NVARCHAR(MAX)
+            CREATE OR REPLACE PROCEDURE searchTasks(
+                user_id IN NUMBER,
+                keyword IN VARCHAR2,
+                sort_dir IN VARCHAR2,
+                recordset OUT SYS_REFCURSOR
+            )
             AS
+                v_sql VARCHAR2(4000);
+                v_safe_keyword VARCHAR2(100);
             BEGIN
-                DECLARE @sql NVARCHAR(MAX);
-                SET @sql = 'SELECT id, title, description FROM tasks WHERE user_id = ' + CAST(@user_id AS NVARCHAR(20));
+                v_sql := 'SELECT id, title, description FROM tasks WHERE user_id = ' || user_id;
 
-                IF @keyword IS NOT NULL AND LEN(@keyword) > 0
-                BEGIN
-                    DECLARE @safe_keyword NVARCHAR(100) = REPLACE(@keyword, '''', '');
-                    SET @safe_keyword = REPLACE(@keyword, ';', '');
-                    SET @sql = @sql + ' AND (title LIKE ''%' + @safe_keyword + '%'' OR description LIKE ''%' + @safe_keyword + '%'')';
-                END
+                IF keyword IS NOT NULL AND LENGTH(keyword) > 0 THEN
+                    v_safe_keyword := REPLACE(keyword, '''', '');
+                    v_safe_keyword := REPLACE(v_safe_keyword, ';', '');
 
-                SET @sql = @sql + ' ORDER BY title ' + @sort_dir;
-                PRINT @sql;
+                    v_sql := v_sql || ' AND (title LIKE ''%' || v_safe_keyword || '%'' OR description LIKE ''%' || v_safe_keyword || '%'')';
+                END IF;
 
-                EXEC(@sql);
-            END
+                v_sql := v_sql || ' ORDER BY title ' || sort_dir;
+                DBMS_OUTPUT.PUT_LINE(v_sql);
+
+                OPEN recordset FOR v_sql;
+            END;
         """;
         stmt.execute(createProc);
     }
 
     public static void init() throws Exception {
-        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver"); 
-        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            initUsersTable(stmt);
-            initTasksTable(stmt);
-            initVulnerableProcedure(stmt);
+        Class.forName("oracle.jdbc.OracleDriver");
+
+        int maxRetries = 5;
+        int retryCount = 0;
+        int retryDelayMs = 5000;
+        while (true) {
+            System.out.println("Attempting to connect to the database...");
+            try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+                try {
+                    initUsersTable(stmt);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+                
+                try {
+                    initTasksTable(stmt);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+                
+                try {
+                    initVulnerableProcedure(stmt);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+                break; 
+            } catch (Exception e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    System.err.println("Exceeded maximum number of retries to connect to the database.");
+                    throw e;
+                }
+                System.err.println("Database connection failed. Retrying in " + (retryDelayMs / 1000) + " seconds...");
+                try { Thread.sleep(retryDelayMs); } catch (InterruptedException ie) {}
+            }
         }
     }
 }

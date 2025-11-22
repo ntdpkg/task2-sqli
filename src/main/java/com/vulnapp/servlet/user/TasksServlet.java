@@ -17,6 +17,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.sql.CallableStatement; 
+import java.sql.Types;             
 
 public class TasksServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -30,14 +32,16 @@ public class TasksServlet extends HttpServlet {
         String sortOrder = req.getParameter("order") != null ? req.getParameter("order") : "ASC";
 
         List<Task> tasks = new ArrayList<>();
-//        String sql = "{call dbo.searchTasks(?, ?, ?)}";
-        String sql = "exec dbo.searchTasks @user_id=?, @keyword=?, @sort_dir=?";
+        String sql = "{call searchTasks(?, ?, ?, ?)}";
 
-        try (Connection conn = Database.getConnection(); CallableStatement pstmt = conn.prepareCall(sql)) {
-            pstmt.setInt(1, user.getId());
-            pstmt.setString(2, searchQuery);
-            pstmt.setString(3, sortOrder);
-            ResultSet rs = pstmt.executeQuery();
+        try (Connection conn = Database.getConnection(); CallableStatement cstmt = conn.prepareCall(sql)) {
+            cstmt.setInt(1, user.getId());
+            cstmt.setString(2, searchQuery);
+            cstmt.setString(3, sortOrder);
+            cstmt.registerOutParameter(4, Types.REF_CURSOR);
+
+            cstmt.execute();
+            ResultSet rs = (ResultSet) cstmt.getObject(4);
 
             while (rs.next()) {
                 tasks.add(new Task(rs.getInt("id"), rs.getString("title"), rs.getString("description")));
