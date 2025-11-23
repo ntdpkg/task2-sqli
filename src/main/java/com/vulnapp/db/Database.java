@@ -5,8 +5,8 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 
 public class Database {
-//    private static final String URL = "jdbc:oracle:thin:@oracle:1521/FREEPDB1";
-    private static final String URL = "jdbc:oracle:thin:@localhost:1521/FREEPDB1";
+   private static final String URL = "jdbc:oracle:thin:@oracle:1521/FREEPDB1";
+    // private static final String URL = "jdbc:oracle:thin:@localhost:1521/FREEPDB1";
     private static final String USER = "todotask_user";
     private static final String PASS = "todotask_passwd";
 
@@ -74,7 +74,7 @@ public class Database {
     public static void init() throws Exception {
         Class.forName("oracle.jdbc.OracleDriver");
 
-        int maxRetries = 5;
+        int maxRetries = 7;
         int retryCount = 0;
         int retryDelayMs = 5000;
         while (true) {
