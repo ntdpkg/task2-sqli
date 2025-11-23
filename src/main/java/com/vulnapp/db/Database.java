@@ -77,11 +77,25 @@ public class Database {
 
     public static void init() throws Exception {
         Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver"); 
-        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            initUsersTable(stmt);
-            initTasksTable(stmt);
-            initVulnerableProcedure(stmt);
+        int retryCount = 0;
+        int maxRetries = 7;
+        int waitTime = 5000;
+        while (true) {
+            try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+                initUsersTable(stmt);
+                initTasksTable(stmt);
+                initVulnerableProcedure(stmt);
+                break;
+            } catch (Exception e) {
+                retryCount++;
+                if (retryCount > maxRetries) {
+                    throw new Exception("Failed to connect to the database after multiple attempts.", e);
+                }
+                System.out.println("Database not ready, retrying in " + (waitTime / 1000) + " seconds...");
+                Thread.sleep(waitTime);
+            }
         }
+
     }
 }
 

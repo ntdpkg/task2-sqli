@@ -12,12 +12,13 @@ services:
       - vuln-net
 
   mssql:
+    platform: linux/amd64 
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: vuln-mssql
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=StrongPassw0rd!123 
-      - MSSQL_PID=Express
+      - MSSQL_PID=Developer
     ports:
       - "1433:1433"
     restart: unless-stopped
