@@ -20,27 +20,35 @@ import java.util.Map;
 
 public class TasksServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        // User user = new User(1, "test", "", "admin");
         User user = JwtUtil.verifyUser(req, resp);
         if (user == null) {
             resp.sendRedirect("/login");
             return;
         }
         String searchQuery = req.getParameter("q");
+        // Nhận tham số sort từ URL (Inject tại đây)
         String sortOrder = req.getParameter("order") != null ? req.getParameter("order") : "ASC";
 
         List<Task> tasks = new ArrayList<>();
-//        String sql = "{call dbo.searchTasks(?, ?, ?)}";
-        String sql = "exec dbo.searchTasks @user_id=?, @keyword=?, @sort_dir=?";
+        
+        // Cú pháp gọi Procedure trong MySQL
+        String sql = "{CALL searchTasks(?, ?, ?)}";
 
-        try (Connection conn = Database.getConnection(); CallableStatement pstmt = conn.prepareCall(sql)) {
-            pstmt.setInt(1, user.getId());
-            pstmt.setString(2, searchQuery);
-            pstmt.setString(3, sortOrder);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                tasks.add(new Task(rs.getInt("id"), rs.getString("title"), rs.getString("description")));
+        try (Connection conn = Database.getConnection(); CallableStatement cstmt = conn.prepareCall(sql)) {
+            cstmt.setInt(1, user.getId());
+            cstmt.setString(2, searchQuery != null ? searchQuery : "");
+            
+            // Tham số này sẽ được Procedure nối chuỗi -> LỖ HỔNG
+            cstmt.setString(3, sortOrder); 
+            
+            boolean hasResults = cstmt.execute();
+            
+            if (hasResults) {
+                try (ResultSet rs = cstmt.getResultSet()) {
+                    while (rs.next()) {
+                        tasks.add(new Task(rs.getInt("id"), rs.getString("title"), rs.getString("description")));
+                    }
+                }
             }
         } catch (Exception e) {
             throw new IOException("Database error", e);
@@ -52,9 +60,9 @@ public class TasksServlet extends HttpServlet {
             
             Map<String, Object> data = new HashMap<>();
             data.put("username", user.getUsername());
-            
             data.put("currentQuery", searchQuery != null ? searchQuery : "");
             data.put("currentSort", sortOrder); 
+            data.put("tasks", tasks);
 
             if (searchQuery != null && !searchQuery.isEmpty()) {
                 String searchResultHeader = "<h2>Search Results for: " + (searchQuery != null ? searchQuery : "") + "</h2>";
@@ -67,7 +75,7 @@ public class TasksServlet extends HttpServlet {
             String taskResults;
             StringWriter dynamicOut = new StringWriter();
             if (tasks.isEmpty()) {
-                taskResults = "<p>No tasks found. Add a new task to get started!</p>";
+                taskResults = "<p>No tasks found.</p>";
                 Template dynamicTemplate = new Template("tasksEmpty", new StringReader(taskResults), cfg);
                 dynamicTemplate.process(data, dynamicOut);
             } else {
@@ -87,7 +95,6 @@ public class TasksServlet extends HttpServlet {
                     </form>
                     """;
                 Template dynamicTemplate = new Template("taskResults", new StringReader(taskResults), cfg);
-                data.put("tasks", tasks);
                 dynamicTemplate.process(data, dynamicOut);
             }
             data.put("taskResults", dynamicOut.toString());
@@ -101,16 +108,13 @@ public class TasksServlet extends HttpServlet {
         }
     }
     
+    // POST method: Add/Delete tasks (Standard JDBC)
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         User user = JwtUtil.verifyUser(req, resp);
-        if (user == null) {
-            return;
-        }
+        if (user == null) return;
     
         String action = req.getParameter("action");
-        if (action == null) {
-            action = "add";
-        }
+        if (action == null) action = "add";
     
         try (Connection conn = Database.getConnection()) {
             switch (action) {
@@ -130,10 +134,9 @@ public class TasksServlet extends HttpServlet {
                     String[] taskIdsToDelete = req.getParameterValues("task_id");
                     if (taskIdsToDelete != null && taskIdsToDelete.length > 0) {
                         String placeholders = String.join(",", Collections.nCopies(taskIdsToDelete.length, "?"));
-                        String sql = "DELETE FROM tasks WHERE user_id = ? AND id IN (?)";
+                        String sql = "DELETE FROM tasks WHERE user_id = ? AND id IN (" + placeholders + ")";
                         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                             pstmt.setInt(1, user.getId());
-                            pstmt.setString(2, placeholders);
                             for (int i = 0; i < taskIdsToDelete.length; i++) {
                                 pstmt.setInt(i + 2, Integer.parseInt(taskIdsToDelete[i]));
                             }
@@ -142,9 +145,6 @@ public class TasksServlet extends HttpServlet {
                     }
                     break;
                 }
-                default:
-                    resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Unknown action");
-                    return;
             }
         } catch (Exception e) {
             resp.sendError(500, "Database error: " + e.getMessage());

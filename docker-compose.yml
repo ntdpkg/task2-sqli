@@ -1,31 +1,11 @@
 version: '3.8'
 
 services:
-  webapp:
-    container_name: vuln-webapp
-    build: 
-      context: ./webapp
+  monolithic-server:
+    build: .
+    container_name: vuln-server
     ports:
       - "8080:8080"
-    depends_on:
-      - mssql
-    networks:
-      - vuln-net
-
-  mssql:
-    container_name: vuln-mssql
-    build:
-      context: ./database/
-
-    environment:
-      - ACCEPT_EULA=Y
-      - ACCEPT_EULA_ML=Y
-      - MSSQL_SA_PASSWORD=StrongPassw0rd!123 
-      - MSSQL_PID=Developer
-    ports:
-      - "1433:1433"
-    restart: unless-stopped
-
     networks:
       - vuln-net
 
