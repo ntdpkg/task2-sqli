@@ -59,7 +59,7 @@ def generate_tasks(cursor, num_tasks, num_users, batch_size):
 
 conn = create_connection()
 if not conn:
-    return
+    exit(1)
     
 try:
     overall_start_time = time.time()

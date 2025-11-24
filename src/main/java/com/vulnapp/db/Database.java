@@ -50,10 +50,17 @@ public class Database {
 
     public static void init() throws Exception {
         Class.forName("org.postgresql.Driver");
-
-        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            initUsersTable(stmt);
-            initTasksTable(stmt);
+        while (true) {
+            try (Connection conn = getConnection()) {
+                initUsersTable(stmt);
+                initTasksTable(stmt);
+                System.out.println("Database is ready.");
+                break;
+            } catch (Exception e) {
+                System.out.println("Database not ready, retrying in 2 seconds...");
+                Thread.sleep(2000);
+            }
         }
+
     }
 }
