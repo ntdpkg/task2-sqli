@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class Database {
-    // KẾT NỐI LOCALHOST VÌ CÙNG SERVER
     private static final String URL = "jdbc:mysql://localhost:3306/todotask_db?allowPublicKeyRetrieval=true&useSSL=false&allowMultiQueries=true";
     private static final String USER = "todotask_user";
     private static final String PASS = "todotask_passwd";
@@ -50,7 +49,6 @@ public class Database {
     private static void initVulnerableProcedure(Statement stmt) throws Exception {
         stmt.execute("DROP PROCEDURE IF EXISTS searchTasks");
 
-        // VULNERABLE PROCEDURE (ORDER BY INJECTION)
         String createProc = """
             CREATE PROCEDURE searchTasks(
                 IN user_id INT, 
@@ -64,7 +62,6 @@ public class Database {
                     SET @query = CONCAT(@query, ' AND (title LIKE ''%', keyword, '%'' OR description LIKE ''%', keyword, '%'')');
                 END IF;
 
-                -- Injection Point
                 SET @query = CONCAT(@query, ' ORDER BY title ', sort_dir);
                 
                 PREPARE stmt FROM @query;
@@ -77,7 +74,6 @@ public class Database {
 
     public static void init() throws Exception {
         Class.forName("com.mysql.cj.jdbc.Driver");
-        // Localhost nên kết nối rất nhanh, retry ít thôi
         int retries = 5;
         while (retries > 0) {
             try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
