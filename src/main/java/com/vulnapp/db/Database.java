@@ -51,7 +51,7 @@ public class Database {
     public static void init() throws Exception {
         Class.forName("org.postgresql.Driver");
         while (true) {
-            try (Connection conn = getConnection()) {
+            try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
                 initUsersTable(stmt);
                 initTasksTable(stmt);
                 System.out.println("Database is ready.");
